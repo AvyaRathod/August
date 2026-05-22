@@ -2,6 +2,8 @@ import fs from 'fs'
 import path from 'path'
 import { createClient } from '@/lib/supabase/server'
 import type { Plot } from '@/lib/types/database'
+import type { ProjectConfig } from '@/lib/types/project'
+import ProjectExperience from '@/components/map/ProjectExperience'
 
 export const revalidate = 60
 
@@ -32,6 +34,9 @@ export default async function ProjectPage({
   )
   const geoJson = JSON.parse(fs.readFileSync(geoJsonPath, 'utf-8')) as GeoJSON
 
+  const configPath = path.join(process.cwd(), 'data', 'projects', slug, 'config.json')
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as ProjectConfig
+
   const supabase = await createClient()
   const { data } = await supabase
     .from('plots')
@@ -50,8 +55,15 @@ export default async function ProjectPage({
   }))
 
   return (
-    <main>
-      <pre>{JSON.stringify({ slug, featureCount: features.length }, null, 2)}</pre>
+    <main className="w-full h-screen overflow-hidden">
+      <ProjectExperience
+        geojson={{ type: 'FeatureCollection', features } as GeoJSON.FeatureCollection<GeoJSON.Geometry, { status?: string; [key: string]: unknown }>}
+        style={config.mapboxStyle}
+        cameraStages={config.cameraStages}
+        initialCamera={{ center: [78.9629, 20.5937], zoom: 5, pitch: 0, bearing: 0 }}
+        projectSlug={slug}
+        whatsappNumber={config.cta.whatsappNumber}
+      />
     </main>
   )
 }
