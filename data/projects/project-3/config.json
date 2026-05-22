@@ -1,0 +1,17 @@
+{
+  "slug": "project-3",
+  "name": "Project 3",
+  "tagline": "",
+  "mapboxStyle": "mapbox://styles/mapbox/satellite-streets-v12",
+  "masterPlan": {
+    "desktop": "assets/master-plan.png",
+    "mobile": "assets/master-plan-mobile.png",
+    "georef": null
+  },
+  "cameraStages": [],
+  "landingLoop": "assets/landing-loop.mp4",
+  "cta": {
+    "label": "Schedule a Site Visit",
+    "whatsappNumber": ""
+  }
+}
