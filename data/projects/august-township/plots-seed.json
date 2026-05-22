@@ -1,0 +1,32 @@
+[
+  {
+    "plot_number": "P001",
+    "geometry_ref": "plot-p001",
+    "area_sqft": 1200,
+    "type": "residential",
+    "facing": "east",
+    "status": "available",
+    "price": 4500000,
+    "notes": null
+  },
+  {
+    "plot_number": "P002",
+    "geometry_ref": "plot-p002",
+    "area_sqft": 1500,
+    "type": "residential",
+    "facing": "north",
+    "status": "available",
+    "price": 5200000,
+    "notes": null
+  },
+  {
+    "plot_number": "P003",
+    "geometry_ref": "plot-p003",
+    "area_sqft": 900,
+    "type": "corner",
+    "facing": "north-east",
+    "status": "reserved",
+    "price": 3800000,
+    "notes": "Held for client review"
+  }
+]
