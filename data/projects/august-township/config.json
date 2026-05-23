@@ -9,9 +9,15 @@
     "georef": null
   },
   "cameraStages": [],
-  "landingLoop": "assets/landing-loop.mp4",
+  "initialCamera": {
+    "center": [73.4076, 18.7537],
+    "zoom": 17.5,
+    "pitch": 55,
+    "bearing": -20
+  },
+  "landingLoop": "",
   "cta": {
     "label": "Schedule a Site Visit",
-    "whatsappNumber": ""
+    "whatsappNumber": "+919999000111"
   }
 }

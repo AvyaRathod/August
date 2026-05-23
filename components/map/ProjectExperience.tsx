@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import ScrollScene from './ScrollScene'
+import { useEffect, useState } from 'react'
 import InteractiveScene from './InteractiveScene'
 import PlotDetailPanel from './PlotDetailPanel'
-import type { CameraStage } from '@/lib/types/project'
+import ProjectShowcase from './ProjectShowcase'
+import type { AmenityDef } from '@/lib/types/project'
 
 type Camera = { center: [number, number]; zoom: number; pitch: number; bearing: number }
 type GeoJSONCollection = GeoJSON.FeatureCollection<GeoJSON.Geometry, { status?: string; [key: string]: unknown }>
@@ -12,32 +12,43 @@ type GeoJSONCollection = GeoJSON.FeatureCollection<GeoJSON.Geometry, { status?: 
 interface ProjectExperienceProps {
   geojson: GeoJSONCollection
   style: string
-  cameraStages: CameraStage[]
+  amenities: AmenityDef[]
   initialCamera: Camera
   projectSlug: string
+  projectName: string
+  tagline?: string
   whatsappNumber: string
 }
 
 export default function ProjectExperience({
   geojson,
   style,
-  cameraStages,
+  amenities,
   initialCamera,
   projectSlug,
+  projectName,
+  tagline,
   whatsappNumber,
 }: ProjectExperienceProps) {
-  const [mode, setMode] = useState<'scroll' | 'explore'>('scroll')
-  const [exploreCamera, setExploreCamera] = useState<Camera>(initialCamera)
+  const [mode, setMode] = useState<'showcase' | 'explore'>('showcase')
   const [selectedProperties, setSelectedProperties] = useState<Record<string, unknown> | null>(null)
 
-  function handleExplore(camera: Camera) {
-    setExploreCamera(camera)
+  useEffect(() => {
+    if (mode !== 'explore') return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mode])
+
+  function handleExplore() {
     setMode('explore')
   }
 
   function handleBack() {
     setSelectedProperties(null)
-    setMode('scroll')
+    setMode('showcase')
   }
 
   function handlePlotClick(plotId: string | number, properties: Record<string, unknown>) {
@@ -50,11 +61,11 @@ export default function ProjectExperience({
 
   if (mode === 'explore') {
     return (
-      <div className="relative w-full h-screen">
+      <div className="fixed inset-0 z-40 w-full h-screen">
         <InteractiveScene
           geojson={geojson}
           style={style}
-          entryCamera={exploreCamera}
+          entryCamera={initialCamera}
           onBack={handleBack}
           onPlotClick={handlePlotClick}
         />
@@ -71,11 +82,14 @@ export default function ProjectExperience({
   }
 
   return (
-    <ScrollScene
+    <ProjectShowcase
+      projectName={projectName}
+      tagline={tagline}
+      amenities={amenities}
       geojson={geojson}
       style={style}
-      cameraStages={cameraStages}
       initialCamera={initialCamera}
+      projectSlug={projectSlug}
       onExplore={handleExplore}
     />
   )

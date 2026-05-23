@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Lenis from 'lenis'
-import type { CameraStage } from '@/lib/types/project'
+import type { AmenityDef, CameraStage } from '@/lib/types/project'
 import MapView, { type MapViewHandle } from './MapView'
+import AmenityOverlay from './AmenityOverlay'
 
 type GeoJSONCollection = GeoJSON.FeatureCollection<GeoJSON.Geometry, { status?: string; [key: string]: unknown }>
 
@@ -14,7 +15,10 @@ interface ScrollSceneProps {
   style: string
   cameraStages: CameraStage[]
   initialCamera: Camera
+  amenities?: AmenityDef[]
+  projectSlug: string
   onExplore?: (camera: Camera) => void
+  onMapReady?: () => void
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -39,23 +43,29 @@ export default function ScrollScene({
   style,
   cameraStages,
   initialCamera,
+  amenities = [],
+  projectSlug,
   onExplore,
+  onMapReady,
 }: ScrollSceneProps) {
   const mapHandleRef = useRef<MapViewHandle>(null)
   const isMapLoaded = useRef(false)
+  const lenisRef = useRef<Lenis | null>(null)
+  const [progress, setProgress] = useState(0)
 
   useEffect(() => {
     const lenis = new Lenis({ autoRaf: true })
+    lenisRef.current = lenis
 
     lenis.on('scroll', ({ scroll, limit }: { scroll: number; limit: number }) => {
+      const p = limit > 0 ? Math.min(1, Math.max(0, scroll / limit)) : 0
+      setProgress(p)
+
       if (!isMapLoaded.current || cameraStages.length === 0) return
 
       const map = mapHandleRef.current?.map
       if (!map) return
 
-      const progress = limit > 0 ? Math.min(1, Math.max(0, scroll / limit)) : 0
-
-      // Find bracketing stages
       const sorted = [...cameraStages].sort((a, b) => a.scrollProgress - b.scrollProgress)
 
       let from = sorted[0]
@@ -65,21 +75,20 @@ export default function ScrollScene({
       for (let i = 0; i < sorted.length - 1; i++) {
         const curr = sorted[i]
         const next = sorted[i + 1]
-        if (progress >= curr.scrollProgress && progress <= next.scrollProgress) {
+        if (p >= curr.scrollProgress && p <= next.scrollProgress) {
           from = curr
           to = next
           const range = next.scrollProgress - curr.scrollProgress
-          t = range > 0 ? (progress - curr.scrollProgress) / range : 0
+          t = range > 0 ? (p - curr.scrollProgress) / range : 0
           break
         }
       }
 
-      // Clamp to first/last stage when outside range
-      if (progress < sorted[0].scrollProgress) {
+      if (p < sorted[0].scrollProgress) {
         from = sorted[0]
         to = sorted[0]
         t = 0
-      } else if (progress > sorted[sorted.length - 1].scrollProgress) {
+      } else if (p > sorted[sorted.length - 1].scrollProgress) {
         from = sorted[sorted.length - 1]
         to = sorted[sorted.length - 1]
         t = 0
@@ -88,7 +97,6 @@ export default function ScrollScene({
       map.easeTo({ ...lerpCamera(from, to, t), duration: 0 })
     })
 
-    // Track map load state via interval check (MapView fires 'load' internally)
     const loadCheck = setInterval(() => {
       const map = mapHandleRef.current?.map
       if (map && map.isStyleLoaded()) {
@@ -99,9 +107,18 @@ export default function ScrollScene({
 
     return () => {
       lenis.destroy()
+      lenisRef.current = null
       clearInterval(loadCheck)
     }
   }, [cameraStages])
+
+  function pauseScroll() {
+    lenisRef.current?.stop()
+  }
+
+  function resumeScroll() {
+    lenisRef.current?.start()
+  }
 
   return (
     <div style={{ height: '300vh' }} className="relative">
@@ -111,6 +128,14 @@ export default function ScrollScene({
           geojson={geojson}
           style={style}
           initialCamera={initialCamera}
+          onReady={onMapReady}
+        />
+        <AmenityOverlay
+          amenities={amenities}
+          progress={progress}
+          projectSlug={projectSlug}
+          onModalOpen={pauseScroll}
+          onModalClose={resumeScroll}
         />
         {onExplore && (
           <button

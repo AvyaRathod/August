@@ -9,7 +9,7 @@
     "georef": null
   },
   "cameraStages": [],
-  "landingLoop": "assets/landing-loop.mp4",
+  "landingLoop": "",
   "cta": {
     "label": "Schedule a Site Visit",
     "whatsappNumber": ""

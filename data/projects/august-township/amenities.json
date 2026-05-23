@@ -1,1 +1,38 @@
-[]
+[
+  {
+    "id": "clubhouse",
+    "name": "The Clubhouse",
+    "displayMode": "modal",
+    "scrollStageRange": [0.05, 0.30],
+    "anchor": [73.4076, 18.7537],
+    "videoPath": "",
+    "description": "Lounge, banquet hall, library, and members-only café. The social heart of the township."
+  },
+  {
+    "id": "swimming-pool",
+    "name": "Olympic-Size Pool",
+    "displayMode": "modal",
+    "scrollStageRange": [0.28, 0.52],
+    "anchor": [73.4080, 18.7540],
+    "videoPath": "",
+    "description": "Heated 50m pool with adjacent kids' splash zone, sundeck, and changing pavilions."
+  },
+  {
+    "id": "sports",
+    "name": "Sports Complex",
+    "displayMode": "modal",
+    "scrollStageRange": [0.50, 0.72],
+    "anchor": [73.4072, 18.7533],
+    "videoPath": "",
+    "description": "Tennis, badminton, squash, and a fully-equipped fitness centre with personal trainers on call."
+  },
+  {
+    "id": "gardens",
+    "name": "Lakeside Gardens",
+    "displayMode": "modal",
+    "scrollStageRange": [0.70, 0.95],
+    "anchor": [73.4068, 18.7530],
+    "videoPath": "",
+    "description": "Three landscaped acres with reflexology trail, koi pond, and a sunset amphitheatre."
+  }
+]

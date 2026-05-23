@@ -18,15 +18,39 @@ interface InteractiveSceneProps {
   onPlotClick: (plotId: string | number, properties: Record<string, unknown>) => void
 }
 
-const STATUS_COLORS: mapboxgl.Expression = [
+const STATUS_TEXT_COLORS: mapboxgl.Expression = [
   'match',
   ['get', 'status'],
-  'available', '#22c55e',
-  'reserved', '#f59e0b',
-  'sold', '#ef4444',
-  'blocked', '#6b7280',
-  '#6b7280',
+  'available', '#15803d',
+  'reserved', '#b45309',
+  'sold', '#b91c1c',
+  'blocked', '#374151',
+  '#374151',
 ]
+
+const INTERACTIVE_LAYERS = ['plots-extrusion', 'plots-outline', 'plots-label']
+
+const PANEL_WIDTH_PX = 384
+const PANEL_INSET_PX = 16
+const FOCUS_PADDING_RIGHT = PANEL_WIDTH_PX + PANEL_INSET_PX * 2
+
+function polygonCenter(geom: GeoJSON.Geometry): [number, number] | null {
+  let ring: GeoJSON.Position[] | null = null
+  if (geom.type === 'Polygon') ring = geom.coordinates[0]
+  else if (geom.type === 'MultiPolygon') ring = geom.coordinates[0]?.[0] ?? null
+  if (!ring || ring.length === 0) return null
+  let sx = 0
+  let sy = 0
+  const last = ring[ring.length - 1]
+  const first = ring[0]
+  const closed = last[0] === first[0] && last[1] === first[1]
+  const pts = closed ? ring.slice(0, -1) : ring
+  for (const [x, y] of pts) {
+    sx += x
+    sy += y
+  }
+  return [sx / pts.length, sy / pts.length]
+}
 
 type FilterValue = PlotStatus | 'all'
 
@@ -46,8 +70,9 @@ export default function InteractiveScene({
     const map = mapRef.current
     if (!map) return
     const expr = value === 'all' ? null : ['==', ['get', 'status'], value]
-    map.setFilter('plots-fill', expr as mapboxgl.FilterSpecification | null)
-    map.setFilter('plots-outline', expr as mapboxgl.FilterSpecification | null)
+    for (const layerId of INTERACTIVE_LAYERS) {
+      map.setFilter(layerId, expr as mapboxgl.FilterSpecification | null)
+    }
   }
 
   useEffect(() => {
@@ -60,7 +85,13 @@ export default function InteractiveScene({
       zoom: entryCamera.zoom,
       pitch: entryCamera.pitch,
       bearing: entryCamera.bearing,
+      dragRotate: true,
+      pitchWithRotate: true,
+      touchZoomRotate: true,
+      touchPitch: true,
     })
+
+    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true, showCompass: true }), 'top-right')
 
     mapRef.current = map
 
@@ -75,22 +106,20 @@ export default function InteractiveScene({
       })
 
       map.addLayer({
-        id: 'plots-fill',
-        type: 'fill',
+        id: 'plots-extrusion',
+        type: 'fill-extrusion',
         source: 'plots',
         paint: {
-          'fill-color': [
+          'fill-extrusion-color': [
             'case',
             ['boolean', ['feature-state', 'selected'], false], '#3b82f6',
-            ['boolean', ['feature-state', 'hover'], false], '#93c5fd',
-            STATUS_COLORS,
+            ['boolean', ['feature-state', 'hover'], false], '#e0f2fe',
+            '#ffffff',
           ],
-          'fill-opacity': [
-            'case',
-            ['boolean', ['feature-state', 'selected'], false], 1.0,
-            ['boolean', ['feature-state', 'hover'], false], 0.85,
-            0.6,
-          ],
+          'fill-extrusion-height': 6,
+          'fill-extrusion-base': 0,
+          'fill-extrusion-opacity': 0.95,
+          'fill-extrusion-vertical-gradient': true,
         },
       })
 
@@ -102,16 +131,46 @@ export default function InteractiveScene({
           'line-color': [
             'case',
             ['boolean', ['feature-state', 'selected'], false], '#1d4ed8',
-            'transparent',
+            '#475569',
           ],
-          'line-width': 2,
+          'line-width': [
+            'case',
+            ['boolean', ['feature-state', 'selected'], false], 2.5,
+            0.5,
+          ],
         },
       })
 
-      // Explore transition: animate pitch to 45° to signal interactive mode
-      map.easeTo({ pitch: 45, duration: 600 })
+      map.addLayer({
+        id: 'plots-label',
+        type: 'symbol',
+        source: 'plots',
+        layout: {
+          'text-field': [
+            'format',
+            ['get', 'plot_number'], { 'font-scale': 1.0 },
+            '\n', {},
+            ['upcase', ['coalesce', ['get', 'status'], 'unknown']], { 'font-scale': 0.78 },
+          ],
+          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+          'text-size': 12,
+          'text-anchor': 'center',
+          'text-justify': 'center',
+          'text-allow-overlap': true,
+          'text-ignore-placement': true,
+        },
+        paint: {
+          'text-color': STATUS_TEXT_COLORS,
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 1.6,
+          'text-halo-blur': 0.4,
+        },
+      })
 
-      map.on('mousemove', 'plots-fill', (e) => {
+      // Explore transition: animate pitch to 55° to signal interactive mode
+      map.easeTo({ pitch: 55, duration: 600 })
+
+      map.on('mousemove', 'plots-extrusion', (e) => {
         if (!e.features?.length) return
         map.getCanvas().style.cursor = 'pointer'
         if (hoveredId !== null) {
@@ -121,7 +180,7 @@ export default function InteractiveScene({
         map.setFeatureState({ source: 'plots', id: hoveredId }, { hover: true })
       })
 
-      map.on('mouseleave', 'plots-fill', () => {
+      map.on('mouseleave', 'plots-extrusion', () => {
         map.getCanvas().style.cursor = ''
         if (hoveredId !== null) {
           map.setFeatureState({ source: 'plots', id: hoveredId }, { hover: false })
@@ -129,25 +188,46 @@ export default function InteractiveScene({
         }
       })
 
-      map.on('click', 'plots-fill', (e) => {
+      map.on('click', 'plots-extrusion', (e) => {
         if (!e.features?.length) return
         e.originalEvent.stopPropagation()
         if (selectedId !== null) {
           map.setFeatureState({ source: 'plots', id: selectedId }, { selected: false })
         }
-        selectedId = e.features[0].id as number
+        const feature = e.features[0]
+        selectedId = feature.id as number
         map.setFeatureState({ source: 'plots', id: selectedId }, { selected: true })
-        const props = (e.features[0].properties ?? {}) as Record<string, unknown>
+        const props = (feature.properties ?? {}) as Record<string, unknown>
         const plotId = (props.geometry_ref as string) ?? selectedId
         onPlotClick(plotId, props)
+
+        const center = polygonCenter(feature.geometry)
+        if (center) {
+          const isDesktop =
+            typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches
+          map.easeTo({
+            center,
+            zoom: Math.max(map.getZoom(), 18.5),
+            padding: isDesktop
+              ? { top: 0, bottom: 0, left: 0, right: FOCUS_PADDING_RIGHT }
+              : { top: 0, bottom: 0, left: 0, right: 0 },
+            duration: 700,
+            essential: true,
+          })
+        }
       })
 
       map.on('click', (e) => {
-        const features = map.queryRenderedFeatures(e.point, { layers: ['plots-fill'] })
+        const features = map.queryRenderedFeatures(e.point, { layers: ['plots-extrusion'] })
         if (features.length === 0 && selectedId !== null) {
           map.setFeatureState({ source: 'plots', id: selectedId }, { selected: false })
           selectedId = null
           onPlotClick('', {})
+          map.easeTo({
+            padding: { top: 0, bottom: 0, left: 0, right: 0 },
+            duration: 500,
+            essential: true,
+          })
         }
       })
     })

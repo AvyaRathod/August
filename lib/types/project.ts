@@ -29,6 +29,13 @@ export interface MasterPlanConfig {
   } | null
 }
 
+export interface InitialCamera {
+  center: [number, number]
+  zoom: number
+  pitch: number
+  bearing: number
+}
+
 export interface ProjectConfig {
   slug: string
   name: string
@@ -36,7 +43,8 @@ export interface ProjectConfig {
   mapboxStyle: string
   masterPlan: MasterPlanConfig
   cameraStages: CameraStage[]
-  landingLoop: string
+  initialCamera?: InitialCamera
+  landingLoop?: string
   cta: {
     label: string
     whatsappNumber: string
