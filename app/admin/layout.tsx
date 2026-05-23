@@ -1,4 +1,5 @@
+import AdminShell from '@/components/admin/AdminShell'
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  // TODO: Phase 6 — add Supabase session check + admin shell chrome here
-  return <div>{children}</div>
+  return <AdminShell>{children}</AdminShell>
 }

@@ -6,3 +6,5 @@ tsconfig.tsbuildinfo
 /Implementation-Plan.md
 /node_modules
 /package-lock.json
+/.env.local
+/supabase/.temp
