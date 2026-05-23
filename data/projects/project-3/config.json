@@ -1,7 +1,7 @@
 {
   "slug": "project-3",
-  "name": "Project 3",
-  "tagline": "",
+  "name": "Lakeside Greens",
+  "tagline": "Wake to water, walk to woods",
   "mapboxStyle": "mapbox://styles/mapbox/satellite-streets-v12",
   "masterPlan": {
     "desktop": "assets/master-plan.png",
