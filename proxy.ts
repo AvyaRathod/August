@@ -4,9 +4,11 @@ import type { Database } from '@/lib/types/database'
 
 export async function proxy(request: NextRequest) {
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
-  const isLoginPage = request.nextUrl.pathname.startsWith('/admin/login')
+  const isPublicAuthPage =
+    request.nextUrl.pathname.startsWith('/admin/login') ||
+    request.nextUrl.pathname.startsWith('/admin/signup')
 
-  if (!isAdminRoute || isLoginPage) return NextResponse.next()
+  if (!isAdminRoute || isPublicAuthPage) return NextResponse.next()
 
   // Preserve cookies across the session refresh
   const supabaseResponse = NextResponse.next({ request })

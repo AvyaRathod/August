@@ -7,6 +7,7 @@ import PlotEditModal from '@/components/admin/PlotEditModal'
 type StatusFilter = 'all' | PlotStatus
 
 const FILTERS: StatusFilter[] = ['all', 'available', 'reserved', 'sold', 'blocked']
+const STATUSES: PlotStatus[] = ['available', 'reserved', 'sold', 'blocked']
 
 const STATUS_BADGE: Record<PlotStatus, string> = {
   available: 'bg-green-900/40 text-green-400',
@@ -33,12 +34,38 @@ export default function PlotListView({ plots: initialPlots, auditLog }: Props) {
   const [plots, setPlots] = useState<Plot[]>(initialPlots)
   const [filter, setFilter] = useState<StatusFilter>('all')
   const [editingPlot, setEditingPlot] = useState<Plot | null>(null)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [rowError, setRowError] = useState<{ id: string; msg: string } | null>(null)
 
   const plotMap = new Map(plots.map(p => [p.id, p.plot_number]))
   const filtered = filter === 'all' ? plots : plots.filter(p => p.status === filter)
 
   function handleEditSuccess(updated: Plot) {
     setPlots(prev => prev.map(p => (p.id === updated.id ? updated : p)))
+  }
+
+  async function updateStatus(plot: Plot, nextStatus: PlotStatus) {
+    if (nextStatus === plot.status) return
+    setUpdatingId(plot.id)
+    setRowError(null)
+    try {
+      const res = await fetch(`/api/admin/plots/${plot.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Update failed' }))
+        setRowError({ id: plot.id, msg: (err as { error?: string }).error ?? 'Update failed' })
+        return
+      }
+      const updated = (await res.json()) as Plot
+      setPlots(prev => prev.map(p => (p.id === updated.id ? updated : p)))
+    } catch {
+      setRowError({ id: plot.id, msg: 'Network error' })
+    } finally {
+      setUpdatingId(null)
+    }
   }
 
   return (
@@ -92,11 +119,30 @@ export default function PlotListView({ plots: initialPlots, auditLog }: Props) {
                 <td className="py-3 pr-4 text-text-muted">{plot.area_sqft ?? '—'}</td>
                 <td className="py-3 pr-4 text-text-muted">{plot.facing ?? '—'}</td>
                 <td className="py-3 pr-4">
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_BADGE[plot.status]}`}
-                  >
-                    {plot.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={plot.status}
+                      onChange={(e) => updateStatus(plot, e.target.value as PlotStatus)}
+                      disabled={updatingId === plot.id}
+                      aria-label={`Status for ${plot.plot_number}`}
+                      className={`appearance-none cursor-pointer rounded-full pl-3 pr-7 py-1 text-xs font-medium capitalize border-0 outline-none focus:ring-2 focus:ring-brand-primary/40 disabled:opacity-60 ${STATUS_BADGE[plot.status]}`}
+                      style={{
+                        backgroundImage:
+                          "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='currentColor'><path d='M2 3.5 5 6.5 8 3.5z'/></svg>\")",
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 8px center',
+                      }}
+                    >
+                      {STATUSES.map(s => (
+                        <option key={s} value={s} className="bg-surface-overlay text-text-primary">
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                    {rowError?.id === plot.id && (
+                      <span className="text-red-400 text-[10px]">{rowError.msg}</span>
+                    )}
+                  </div>
                 </td>
                 <td className="py-3 pr-4 text-text-muted">
                   {plot.price !== null ? `₹${plot.price.toLocaleString('en-IN')}` : '—'}

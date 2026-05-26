@@ -7,7 +7,7 @@ import AdminTopbar from './AdminTopbar'
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
-  if (pathname === '/admin/login') {
+  if (pathname === '/admin/login' || pathname === '/admin/signup') {
     return <>{children}</>
   }
 

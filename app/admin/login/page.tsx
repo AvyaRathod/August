@@ -1,12 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function AdminLogin() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -15,12 +18,7 @@ export default function AdminLogin() {
     setError(null)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/admin/auth/callback`,
-      },
-    })
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setError(error.message)
@@ -28,8 +26,8 @@ export default function AdminLogin() {
       return
     }
 
-    setSent(true)
-    setLoading(false)
+    router.push('/admin')
+    router.refresh()
   }
 
   return (
@@ -43,46 +41,56 @@ export default function AdminLogin() {
         </div>
 
         <div className="bg-surface-card border border-surface-overlay rounded-lg p-8">
-          {sent ? (
-            <div className="text-center space-y-2">
-              <p className="text-text-primary font-medium">Check your email</p>
-              <p className="text-text-muted text-sm">
-                We sent a magic link to <span className="text-text-primary">{email}</span>
-              </p>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm text-text-muted mb-1.5">
+                Email address
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full bg-surface-overlay border border-surface-overlay rounded-md px-3 py-2 text-text-primary placeholder:text-text-subtle text-sm outline-none focus:border-brand-primary transition-colors"
+              />
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm text-text-muted mb-1.5"
-                >
-                  Email address
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="w-full bg-surface-overlay border border-surface-overlay rounded-md px-3 py-2 text-text-primary placeholder:text-text-subtle text-sm outline-none focus:border-brand-primary transition-colors"
-                />
-              </div>
 
-              {error && (
-                <p className="text-red-400 text-sm">{error}</p>
-              )}
+            <div>
+              <label htmlFor="password" className="block text-sm text-text-muted mb-1.5">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-surface-overlay border border-surface-overlay rounded-md px-3 py-2 text-text-primary placeholder:text-text-subtle text-sm outline-none focus:border-brand-primary transition-colors"
+              />
+            </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-brand-primary text-surface-dark font-medium text-sm py-2 rounded-md hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Sending…' : 'Send magic link'}
-              </button>
-            </form>
-          )}
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-brand-primary text-surface-dark font-medium text-sm py-2 rounded-md hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Signing in…' : 'Sign in'}
+            </button>
+
+            <p className="text-center text-text-muted text-sm pt-2">
+              Don&apos;t have an account?{' '}
+              <Link href="/admin/signup" className="text-brand-primary hover:underline">
+                Create one
+              </Link>
+            </p>
+          </form>
         </div>
       </div>
     </div>
