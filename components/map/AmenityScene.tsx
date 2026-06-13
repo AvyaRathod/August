@@ -36,9 +36,11 @@ export default function AmenityScene({ amenity, projectSlug, index, total }: Ame
     const container = section.closest('[data-scroll-container]') as HTMLElement | null
     if (!container) return
 
-    // Block browser from playing — we own currentTime
-    const blockPlay = () => video.pause()
-    video.addEventListener('play', blockPlay)
+    // Re-tick when video has frame data — critical on iOS where preload is ignored
+    const onLoaded = () => {
+      if (!rafRef.current) rafRef.current = requestAnimationFrame(tick)
+    }
+    video.addEventListener('loadeddata', onLoaded)
 
     function tick() {
       rafRef.current = null
@@ -49,7 +51,7 @@ export default function AmenityScene({ amenity, projectSlug, index, total }: Ame
       const p = Math.max(0, Math.min(1, (scrollTop - sectionTop) / (sectionH - viewH)))
 
       // Scrub video — clamp off last 100ms to avoid black end-frame
-      if (video!.readyState >= 2 && video!.duration) {
+      if (video!.duration) {
         video!.currentTime = Math.min(p * video!.duration, video!.duration - 0.1)
       }
 
@@ -78,7 +80,7 @@ export default function AmenityScene({ amenity, projectSlug, index, total }: Ame
     container.addEventListener('scroll', onScroll, { passive: true })
     return () => {
       container.removeEventListener('scroll', onScroll)
-      video.removeEventListener('play', blockPlay)
+      video.removeEventListener('loadeddata', onLoaded)
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
   }, [alignRight])
@@ -87,14 +89,16 @@ export default function AmenityScene({ amenity, projectSlug, index, total }: Ame
     <div ref={sectionRef} style={{ height: '200vh' }} className="relative">
       <div className="sticky top-0 w-full h-screen overflow-hidden bg-black">
 
-        {/* Scroll-scrubbed video */}
+        {/* autoPlay forces iOS to buffer; onPlay pauses immediately so we own currentTime */}
         {videoSrc ? (
           <video
             ref={videoRef}
             src={videoSrc}
+            autoPlay
             muted
             playsInline
             preload="auto"
+            onPlay={e => e.currentTarget.pause()}
             className="absolute inset-0 h-full w-full object-cover"
           />
         ) : (

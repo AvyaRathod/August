@@ -30,10 +30,6 @@ export default function VideoHeroScene({ src, projectName, tagline }: VideoHeroS
     const container = section.closest('[data-scroll-container]') as HTMLElement | null
     if (!container) return
 
-    // Block any browser-initiated playback — we own currentTime
-    const blockPlay = () => video.pause()
-    video.addEventListener('play', blockPlay)
-
     function tick() {
       rafRef.current = null
       const sectionTop = section!.offsetTop
@@ -42,33 +38,23 @@ export default function VideoHeroScene({ src, projectName, tagline }: VideoHeroS
       const scrollTop = container!.scrollTop
       const p = Math.max(0, Math.min(1, (scrollTop - sectionTop) / (sectionH - viewH)))
 
-      // Scrub video — clamp to duration-0.1s so the last frame is always visible
-      // (setting currentTime = duration shows a black frame on most codecs)
-      if (video!.readyState >= 2 && video!.duration) {
+      // Scrub — clamp 100ms from end so last frame never goes black
+      if (video!.duration) {
         video!.currentTime = Math.min(p * video!.duration, video!.duration - 0.1)
       }
 
-      // Glass blur: full opacity at 0, gone by progress 0.28
       if (glassRef.current) {
         glassRef.current.style.opacity = String(1 - rangeLerp(p, 0.08, 0.28))
       }
-
-      // Hero title: fades out 0.05 → 0.22, lifts up
       if (heroRef.current) {
         const t = rangeLerp(p, 0.05, 0.22)
         heroRef.current.style.opacity = String(1 - t)
         heroRef.current.style.transform = `translateY(${-32 * t}px)`
       }
-
-      // Scroll hint: gone by 0.06
       if (scrollHintRef.current) {
         scrollHintRef.current.style.opacity = String(1 - rangeLerp(p, 0, 0.06))
       }
-
-      // Caption 1: 0.32 → 0.62
       applyCaptionStyle(cap1Ref.current, p, 0.32, 0.62)
-
-      // Caption 2: 0.72 → 1.0
       applyCaptionStyle(cap2Ref.current, p, 0.72, 1.0)
     }
 
@@ -76,10 +62,18 @@ export default function VideoHeroScene({ src, projectName, tagline }: VideoHeroS
       if (!rafRef.current) rafRef.current = requestAnimationFrame(tick)
     }
 
+    // Re-tick the moment the video has a decodable frame —
+    // critical on iOS where data arrives after scroll events already fired
+    const onLoaded = () => {
+      if (!rafRef.current) rafRef.current = requestAnimationFrame(tick)
+    }
+
     container.addEventListener('scroll', onScroll, { passive: true })
+    video.addEventListener('loadeddata', onLoaded)
+
     return () => {
       container.removeEventListener('scroll', onScroll)
-      video.removeEventListener('play', blockPlay)
+      video.removeEventListener('loadeddata', onLoaded)
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
   }, [])
@@ -88,20 +82,20 @@ export default function VideoHeroScene({ src, projectName, tagline }: VideoHeroS
     <div ref={sectionRef} style={{ height: '300vh' }} className="relative">
       <div className="sticky top-0 w-full h-screen overflow-hidden bg-black">
 
-        {/* Video — scroll-scrubbed */}
+        {/* autoPlay forces iOS to buffer; onPlay pauses immediately so we own currentTime */}
         <video
           ref={videoRef}
           src={src}
+          autoPlay
           muted
           playsInline
           preload="auto"
+          onPlay={e => e.currentTarget.pause()}
           className="absolute inset-0 w-full h-full object-cover"
         />
 
-        {/* Cinematic gradient — always present */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/10 to-black/60 pointer-events-none" />
 
-        {/* Glass blur layer — lifts as user scrolls */}
         <div
           ref={glassRef}
           className="absolute inset-0 pointer-events-none"
@@ -112,7 +106,6 @@ export default function VideoHeroScene({ src, projectName, tagline }: VideoHeroS
           }}
         />
 
-        {/* Hero title */}
         <div
           ref={heroRef}
           className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none"
@@ -131,7 +124,6 @@ export default function VideoHeroScene({ src, projectName, tagline }: VideoHeroS
           )}
         </div>
 
-        {/* Caption 1 */}
         <div
           ref={cap1Ref}
           className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none"
@@ -145,7 +137,6 @@ export default function VideoHeroScene({ src, projectName, tagline }: VideoHeroS
           </p>
         </div>
 
-        {/* Caption 2 */}
         <div
           ref={cap2Ref}
           className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none"
@@ -159,7 +150,6 @@ export default function VideoHeroScene({ src, projectName, tagline }: VideoHeroS
           </h2>
         </div>
 
-        {/* Scroll hint */}
         <div
           ref={scrollHintRef}
           className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none"
