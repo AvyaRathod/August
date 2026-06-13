@@ -18,6 +18,7 @@ interface ProjectExperienceProps {
   projectName: string
   tagline?: string
   whatsappNumber: string
+  showcaseVideo?: string
 }
 
 export default function ProjectExperience({
@@ -29,6 +30,7 @@ export default function ProjectExperience({
   projectName,
   tagline,
   whatsappNumber,
+  showcaseVideo,
 }: ProjectExperienceProps) {
   const [mode, setMode] = useState<'showcase' | 'explore'>('showcase')
   const [selectedProperties, setSelectedProperties] = useState<Record<string, unknown> | null>(null)
@@ -90,6 +92,7 @@ export default function ProjectExperience({
       style={style}
       initialCamera={initialCamera}
       projectSlug={projectSlug}
+      showcaseVideo={showcaseVideo}
       onExplore={handleExplore}
     />
   )

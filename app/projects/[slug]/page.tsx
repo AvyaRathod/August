@@ -81,6 +81,7 @@ export default async function ProjectPage({
         projectName={config.name}
         tagline={config.tagline}
         whatsappNumber={config.cta.whatsappNumber}
+        showcaseVideo={config.showcaseVideo ? `/data/projects/${slug}/${config.showcaseVideo}` : undefined}
       />
     </main>
   )

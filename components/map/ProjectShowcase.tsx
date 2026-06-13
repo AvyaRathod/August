@@ -5,6 +5,7 @@ import type { AmenityDef } from '@/lib/types/project'
 import ProjectHero from './ProjectHero'
 import AmenityScene from './AmenityScene'
 import MapPreviewCard from './MapPreviewCard'
+import VideoHeroScene from './VideoHeroScene'
 
 type GeoJSONCollection = GeoJSON.FeatureCollection<GeoJSON.Geometry, { status?: string; [key: string]: unknown }>
 
@@ -18,12 +19,17 @@ interface ProjectShowcaseProps {
   style: string
   initialCamera: Camera
   projectSlug: string
+  showcaseVideo?: string
   onExplore: () => void
 }
 
 const SNAP_DEBOUNCE_MS = 110
 const SNAP_DURATION_MS = 1400
 const POST_ANIM_LOCK_MS = 80
+// Only snap when within this fraction of viewport height from a section boundary.
+// 0.52 sits between the video-section midpoint (~1.5× vh away) and amenity midpoint (~0.5× vh away),
+// so the video zone never snaps while amenity sections always snap correctly.
+const SNAP_MAX_DISTANCE_RATIO = 0.52
 
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
@@ -37,6 +43,7 @@ export default function ProjectShowcase({
   style,
   initialCamera,
   projectSlug,
+  showcaseVideo,
   onExplore,
 }: ProjectShowcaseProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -72,7 +79,9 @@ export default function ProjectShowcase({
       if (target === null) return
       const start = container.scrollTop
       const distance = target - start
-      if (Math.abs(distance) < 2) return
+      const maxDist = container.clientHeight * SNAP_MAX_DISTANCE_RATIO
+      // Skip if already there or if we're deep inside a free-scroll zone
+      if (Math.abs(distance) < 2 || Math.abs(distance) > maxDist) return
 
       const startTime = performance.now()
       isProgrammatic = true
@@ -85,9 +94,7 @@ export default function ProjectShowcase({
           animFrame = requestAnimationFrame(step)
         } else {
           animFrame = null
-          window.setTimeout(() => {
-            isProgrammatic = false
-          }, POST_ANIM_LOCK_MS)
+          window.setTimeout(() => { isProgrammatic = false }, POST_ANIM_LOCK_MS)
         }
       }
       animFrame = requestAnimationFrame(step)
@@ -100,7 +107,6 @@ export default function ProjectShowcase({
     }
 
     function onUserInput() {
-      // Cancel any in-flight snap so user can override it instantly
       if (animFrame !== null) {
         cancelAnimationFrame(animFrame)
         animFrame = null
@@ -126,15 +132,21 @@ export default function ProjectShowcase({
   return (
     <div
       ref={containerRef}
+      data-scroll-container
       className="fixed inset-0 overflow-y-scroll bg-surface-dark"
     >
-      <ProjectHero name={projectName} tagline={tagline} />
+      {showcaseVideo ? (
+        <VideoHeroScene src={showcaseVideo} projectName={projectName} tagline={tagline} />
+      ) : (
+        <ProjectHero name={projectName} tagline={tagline} />
+      )}
       {amenities.map((amenity, index) => (
         <AmenityScene
           key={amenity.id}
           amenity={amenity}
           projectSlug={projectSlug}
           index={index}
+          total={amenities.length}
         />
       ))}
       <MapPreviewCard

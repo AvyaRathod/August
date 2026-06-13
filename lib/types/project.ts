@@ -45,6 +45,7 @@ export interface ProjectConfig {
   cameraStages: CameraStage[]
   initialCamera?: InitialCamera
   landingLoop?: string
+  showcaseVideo?: string
   cta: {
     label: string
     whatsappNumber: string

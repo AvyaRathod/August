@@ -16,6 +16,7 @@
     "bearing": -20
   },
   "landingLoop": "",
+  "showcaseVideo": "assets/walkthrough.mp4",
   "cta": {
     "label": "Schedule a Site Visit",
     "whatsappNumber": "+919999000111"
